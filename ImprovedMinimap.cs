@@ -19,7 +19,7 @@ namespace ImprovedMinimap {
         public static ManualLogSource StaticLogger;
         public const string pluginGuid = "tinyresort.dinkum.improvedminimap";
         public const string pluginName = "Improved Minimap";
-        public const string pluginVersion = "1.0.0";
+        public const string pluginVersion = "0.1.0";
         public static ConfigEntry<bool> debugMode;
 
         private void Awake() {
