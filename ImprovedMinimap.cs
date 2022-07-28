@@ -38,7 +38,6 @@ namespace ImprovedMinimap {
 
             defaultZoom = Config.Bind<float>("General", "DefaultZoom", 1f, "Default zoom level of minimap. Value of 1 keeps normal game zoom. Lower values are more zoomed out. Higher values are more zoomed in. Range: 0.20 - 1.25");
             nexusID = Config.Bind<int>("General", "NexusID", 18, "Nexus Mod ID. You can find it on the mod's page on nexusmods.com");
-            defaultZoom = Config.Bind<float>("General", "DefaultZoom", 1f, "Default zoom level of minimap. Value of 1 keeps normal game zoom. Lower values are more zoomed out. Higher values are more zoomed in. Range: 0.20 - 1.25");
             isDebug = Config.Bind<bool>("General", "DebugMode", false, "If true, the BepinEx console will print out debug messages related to this mod.");
             hideMinimapHotkey = Config.Bind<KeyCode>("Keybinds", "HideMinimapHotkey", KeyCode.None, "Keybind for toggling whether or not the minimap is shown. (Set to None to disable)");
             zoomInHotkey = Config.Bind<KeyCode>("Keybinds", "ZoomInHotkey", KeyCode.None, "Keybind for zooming in on the minimap. (Set to None to disable)");
