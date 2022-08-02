@@ -30,6 +30,12 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
+  <PropertyGroup>
+    <PreBuildEvent>call C:\PreAndPostBuildBats\ImprovedMinimap\delete.bat</PreBuildEvent>
+  </PropertyGroup>
+  <PropertyGroup>
+    <PostBuildEvent>call C:\PreAndPostBuildBats\ImprovedMinimap\move.bat</PostBuildEvent>
+  </PropertyGroup>
   <ItemGroup>
     <Compile Include="ImprovedMinimap.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
