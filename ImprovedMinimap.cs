@@ -40,7 +40,7 @@ namespace ImprovedMinimap {
         private static float updateAnimalsTimer;
         public static List<AnimalAI> Animals = new List<AnimalAI>();
         public static LayerMask AnimalMask;
-        private static Image AnimalDot;
+        private static Image ModMarker;
         private static List<Image> AvailableDots = new List<Image>();
         private static List<Image> DotsInUse = new List<Image>();
         private static RectTransform AnimalDotParent;
@@ -87,7 +87,7 @@ namespace ImprovedMinimap {
             #endregion
             
             AnimalMask = LayerMask.GetMask("Prey", "Predator");
-            Texture2D tex = new Texture2D(64, 64);
+            Texture2D tex = new Texture2D(64, 64, TextureFormat.RGBA32, false);
             var radius = 32;
             var x = 32;
             var y = 32;
@@ -100,16 +100,16 @@ namespace ImprovedMinimap {
             
             tex.Apply();
 
-            AnimalDot = new GameObject().AddComponent<Image>();
+            ModMarker = new GameObject().AddComponent<Image>();
             var sprite = Sprite.Create(tex, new Rect(Vector2.zero, Vector2.one * 64), Vector2.one * 0.5f);
             sprite.name = "Animal Marker";
-            AnimalDot.sprite = sprite;
-            AnimalDot.rectTransform.anchorMin = Vector2.zero;
-            AnimalDot.rectTransform.anchorMax = Vector2.zero;
-            AnimalDot.rectTransform.sizeDelta = Vector2.one * 32f;
-            AnimalDot.rectTransform.pivot = Vector2.one * 0.5f;
-            AnimalDot.maskable = false;
-            AnimalDot.gameObject.SetActive(false);
+            ModMarker.sprite = sprite;
+            ModMarker.rectTransform.anchorMin = Vector2.zero;
+            ModMarker.rectTransform.anchorMax = Vector2.zero;
+            ModMarker.rectTransform.sizeDelta = Vector2.one * 8f;
+            ModMarker.rectTransform.pivot = Vector2.one * 0.5f;
+            ModMarker.maskable = false;
+            ModMarker.gameObject.SetActive(false);
 
         }
 
@@ -154,7 +154,7 @@ namespace ImprovedMinimap {
                 dot = AvailableDots[0];
                 AvailableDots.RemoveAt(0);
             } else {
-                var GO = Instantiate(AnimalDot.gameObject, AnimalDotParent);
+                var GO = Instantiate(ModMarker.gameObject, AnimalDotParent);
                 dot = GO.GetComponent<Image>();
             }
 
@@ -186,8 +186,9 @@ namespace ImprovedMinimap {
                 AnimalDotParent.anchorMin = Vector2.zero;
                 AnimalDotParent.anchorMax = Vector2.zero;
                 AnimalDotParent.sizeDelta = RenderMap.map.mapImage.rectTransform.sizeDelta;
-                AnimalDotParent.pivot = Vector2.one * 0.5f;
-                AnimalDotParent.anchoredPosition = Vector2.zero;
+                AnimalDotParent.pivot = Vector2.zero;
+                AnimalDotParent.rotation = Quaternion.identity;
+                AnimalDotParent.localPosition = Vector2.zero;
             }
 
             // Makes sure the right number of dots are visible and in use
@@ -195,8 +196,11 @@ namespace ImprovedMinimap {
             while (DotsInUse.Count > Animals.Count) { ReleaseDot(DotsInUse[0]); }
             
             for (var i = 0; i < Animals.Count; i++) {
-                //DotsInUse[i].rectTransform.anchoredPosition = new Vector2(Animals[i].transform.position.x / 4f, Animals[i].transform.position.z / 4f);
-                DotsInUse[i].rectTransform.anchoredPosition = new Vector2(0, 0);
+                DotsInUse[i].rectTransform.rotation = Quaternion.identity;
+                //DotsInUse[i].rectTransform.anchoredPosition = new Vector2(0, 0);
+                DotsInUse[i].rectTransform.localPosition = 
+                    new Vector2(-Animals[i].transform.position.x / (2f * RenderMap.map.mapScale), -Animals[i].transform.position.z / (2f * RenderMap.map.mapScale));
+                //DotsInUse[i].rectTransform.anchoredPosition = new Vector2(100, 100);
                 DotsInUse[i].color = Color.red;
 
             }
