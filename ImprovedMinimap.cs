@@ -10,6 +10,7 @@ using Mirror;
 using UnityEngine;
 using HarmonyLib;
 using System.Reflection;
+using TinyResort;
 using TMPro;
 using UnityEngine.UI;
 
@@ -18,15 +19,12 @@ namespace ImprovedMinimap {
     [BepInPlugin(pluginGuid, pluginName, pluginVersion)]
     public class ImprovedMinimap : BaseUnityPlugin {
 
-        public static ManualLogSource StaticLogger;
+        public static TRPlugin Plugin;
+
         public const string pluginGuid = "tinyresort.dinkum.improvedminimap";
         public const string pluginName = "Improved Minimap";
         public const string pluginVersion = "0.6.0";
-        public static ConfigEntry<bool> isDebug;
-        public static ConfigEntry<KeyCode> zoomInHotkey;
-        public static ConfigEntry<KeyCode> zoomOutHotkey;
-        public static ConfigEntry<float> defaultZoom;
-        public static ConfigEntry<KeyCode> hideMinimapHotkey;
+        
         public static float Zoom = 1;
         public static bool showMinimap = true;
         public static ConfigEntry<int> nexusID;
@@ -35,103 +33,87 @@ namespace ImprovedMinimap {
         private static RectTransform BiomeNameBox;
         public static TextMeshProUGUI BiomeNameText;
         public static ConfigEntry<bool> showBiomeName;
-        public static ConfigEntry<bool> showNearbyAnimals;
 
         private static float updateAnimalsTimer;
-        public static List<AnimalAI> Animals = new List<AnimalAI>();
+        public static List<(AnimalAI AI, AnimalAggressiveness aggression)> Animals = new List<(AnimalAI AI, AnimalAggressiveness aggression)>();
         public static LayerMask AnimalMask;
-        private static Image ModMarker;
-        private static List<Image> AvailableDots = new List<Image>();
-        private static List<Image> DotsInUse = new List<Image>();
-        private static RectTransform AnimalDotParent;
+        private static Sprite AnimalMarkerSprite;
 
-        public static void Dbgl(string str = "") {
-            if (isDebug.Value) { StaticLogger.LogInfo(str); }
-        }
+        public static ConfigEntry<bool> isDebug;
+        public static ConfigEntry<KeyCode> zoomInHotkey;
+        public static ConfigEntry<KeyCode> zoomOutHotkey;
+        public static ConfigEntry<float> defaultZoom;
+        public static ConfigEntry<KeyCode> hideMinimapHotkey;
+        public static ConfigEntry<bool> showNearbyAnimals;
+        public static ConfigEntry<float> AnimalMarkerSize;
+        public static ConfigEntry<bool> ExcludeFarmAnimals;
+        public static ConfigEntry<Color> PassiveAnimalColor;
+        public static ConfigEntry<Color> AggressiveAnimalColor;
+        public static ConfigEntry<Color> DefensiveAnimalColor;
         
         private void Awake() {
 
-            showBiomeName = Config.Bind<bool>("General", "ShowBiomeName", true, "Shows the player's current biome name under the minimap.");
-            showNearbyAnimals = Config.Bind<bool>("General", "ShowNearbyAnimals", true, "Shows red dots on the minimap where animals are located.");
-            defaultZoom = Config.Bind<float>("General", "DefaultZoom", 1f, "Default zoom level of minimap. Value of 1 keeps normal game zoom. Lower values are more zoomed out. Higher values are more zoomed in. Range: 0.20 - 1.25");
-            nexusID = Config.Bind<int>("General", "NexusID", 18, "Nexus Mod ID. You can find it on the mod's page on nexusmods.com");
-            isDebug = Config.Bind<bool>("General", "DebugMode", false, "If true, the BepinEx console will print out debug messages related to this mod.");
-            hideMinimapHotkey = Config.Bind<KeyCode>("Keybinds", "HideMinimapHotkey", KeyCode.None, "Keybind for toggling whether or not the minimap is shown. (Set to None to disable)");
-            zoomInHotkey = Config.Bind<KeyCode>("Keybinds", "ZoomInHotkey", KeyCode.None, "Keybind for zooming in on the minimap. (Set to None to disable)");
-            zoomOutHotkey = Config.Bind<KeyCode>("Keybinds", "ZoomOutHotkey", KeyCode.None, "Keybind for zooming out on the minimap. (Set to None to disable)");
+            Plugin = TRTools.Initialize(this, new Harmony(pluginGuid), Logger, 18, pluginGuid, pluginName, pluginVersion);
+            Plugin.QuickPatch(typeof(CharInteract), "Update", typeof(ImprovedMinimap), "updatePrefix");
+            Plugin.QuickPatch(typeof(RenderMap), "runMapFollow", typeof(ImprovedMinimap), "runMapFollowPrefix");
+            Plugin.QuickPatch(typeof(mapIcon), "Update", typeof(ImprovedMinimap), "mapIconUpdatePostfix");
+
+            #region Config Options
+            showBiomeName = Config.Bind("General", "ShowBiomeName", true, "Shows the player's current biome name under the minimap.");
+            defaultZoom = Config.Bind("General", "DefaultZoom", 1f, "Default zoom level of minimap. Value of 1 keeps normal game zoom. Lower values are more zoomed out. Higher values are more zoomed in. Range: 0.20 - 1.25");
             Zoom = defaultZoom.Value;
 
-            #region Logging
-            StaticLogger = Logger;
-            BepInExInfoLogInterpolatedStringHandler handler = new BepInExInfoLogInterpolatedStringHandler(18, 1, out var flag);
-            if (flag) { handler.AppendLiteral("Plugin " + pluginGuid + " (v" + pluginVersion + ") loaded!"); }
-            StaticLogger.LogInfo(handler);
+            showNearbyAnimals = Config.Bind("MapMarkers", "ShowNearbyAnimals", true, "Shows colored dot markers on the minimap where animals are located.");
+            AnimalMarkerSize = Config.Bind("MapMarkers", "AnimalMarkerSize", 10f, "How big the animal dot markers should appear.");
+            ExcludeFarmAnimals = Config.Bind("MapMarkers", "ExcludeFarmAnimals", true, "If true, then farm animals will not be shown on the minimap.");
+            PassiveAnimalColor = Config.Bind("MapMarkers", "PassiveAnimalColor", new Color(3f / 255f, 240f / 255f, 127f / 255f, 1), "The color of the dot marker for animals that will not attack you ever.");
+            DefensiveAnimalColor = Config.Bind("MapMarkers", "AggressiveAnimalColor", new Color(1, 209f / 255f, 30f / 255f, 1), "The color of the dot marker for defensive animals who attack when threatened.");
+            AggressiveAnimalColor = Config.Bind("MapMarkers", "AggressiveAnimalColor", new Color(242f / 255f, 40f / 255f, 3f / 255f, 1), "The color of the dot marker for aggressive animals who will attack you on sight.");
+         
+            hideMinimapHotkey = Config.Bind("Keybinds", "HideMinimapHotkey", KeyCode.None, "Keybind for toggling whether or not the minimap is shown. (Set to None to disable)");
+            zoomInHotkey = Config.Bind("Keybinds", "ZoomInHotkey", KeyCode.None, "Keybind for zooming in on the minimap. (Set to None to disable)");
+            zoomOutHotkey = Config.Bind("Keybinds", "ZoomOutHotkey", KeyCode.None, "Keybind for zooming out on the minimap. (Set to None to disable)");
             #endregion
 
-            #region Patching
-
-            Harmony harmony = new Harmony(pluginGuid);
-
-            MethodInfo updatePrefix = AccessTools.Method(typeof(ImprovedMinimap), "updatePrefix");
-            MethodInfo update = AccessTools.Method(typeof(CharInteract), "Update");
-            harmony.Patch(update, new HarmonyMethod(updatePrefix));
-            
-            MethodInfo runMapFollow = AccessTools.Method(typeof(RenderMap), "runMapFollow");
-            MethodInfo runMapFollowPrefix = AccessTools.Method(typeof(ImprovedMinimap), "runMapFollowPrefix");
-            harmony.Patch(runMapFollow, new HarmonyMethod(runMapFollowPrefix));
-            
-            MethodInfo mapIconUpdate = AccessTools.Method(typeof(mapIcon), "Update");
-            MethodInfo mapIconUpdatePostfix = AccessTools.Method(typeof(ImprovedMinimap), "mapIconUpdatePostfix");
-            harmony.Patch(mapIconUpdate, new HarmonyMethod(mapIconUpdatePostfix));
-            
-            #endregion
-            
             AnimalMask = LayerMask.GetMask("Prey", "Predator");
-            Texture2D tex = new Texture2D(64, 64, TextureFormat.RGBA32, false);
-            var radius = 32;
-            var x = 32;
-            var y = 32;
-
-            for (int u = x - radius; u < x + radius + 1; u++)
-                for (int v = y - radius; v < y + radius + 1; v++)
-                    if ((x - u) * (x - u) + (y - v) * (y - v) < radius * radius) {
-                        tex.SetPixel(u, v, Color.white);
-                    }
-            
-            tex.Apply();
-
-            ModMarker = new GameObject().AddComponent<Image>();
-            var sprite = Sprite.Create(tex, new Rect(Vector2.zero, Vector2.one * 64), Vector2.one * 0.5f);
-            sprite.name = "Animal Marker";
-            ModMarker.sprite = sprite;
-            ModMarker.rectTransform.anchorMin = Vector2.zero;
-            ModMarker.rectTransform.anchorMax = Vector2.zero;
-            ModMarker.rectTransform.sizeDelta = Vector2.one * 8f;
-            ModMarker.rectTransform.pivot = Vector2.one * 0.5f;
-            ModMarker.maskable = false;
-            ModMarker.gameObject.SetActive(false);
+            AnimalMarkerSprite = TRDrawing.CircleSprite(128, Color.white, 32, new Color(0.25f, 0.25f, 0.25f, 1));
 
         }
 
         [HarmonyPrefix]
         public static void updatePrefix(CharInteract __instance) {
             
+            // Gets the player's current position
             if (!__instance.isLocalPlayer) return;
             currentPosition = __instance.transform.position;
 
+            // Looks for nearby animals
             if (showNearbyAnimals.Value) {
 
+                // Only runs every quarter second to save on performance
                 updateAnimalsTimer -= Time.deltaTime;
                 if (updateAnimalsTimer <= 0) {
 
-                    updateAnimalsTimer = 0.1f;
-                    var hits = Physics.OverlapSphere(currentPosition, 60, AnimalMask);
+                    updateAnimalsTimer = 0.25f;
                     Animals.Clear();
-                    Debug.Log("CHECK AT " + Time.time + " from position " + currentPosition);
+                    
+                    // Physics check to find animals within a radius
+                    var hits = Physics.OverlapSphere(currentPosition, 100f / Zoom, AnimalMask);
                     foreach (var hit in hits) {
-                        Debug.Log(hit.gameObject.name + " at " + hit.transform.position);
+                        
+                        // Ignore farm animals if the setting says to
                         var animal = hit.GetComponentInParent<AnimalAI>();
-                        if (!Animals.Contains(animal)) { Animals.Add(animal); }
+                        if (ExcludeFarmAnimals.Value && hit.GetComponentInParent<FarmAnimal>()) continue;
+                        
+                        // Figures out how aggressive the animal is for marker style purposes
+                        var aggression = AnimalAggressiveness.Passive;
+                        if (animal.myEnemies == (animal.myEnemies & (1 << LayerMask.NameToLayer("Char")))) {
+                            var AttackAI = animal.GetComponent<AnimalAI_Attack>();
+                            if (AttackAI != null) { aggression = AttackAI.attackOnlyOnAttack ? AnimalAggressiveness.Defensive : AnimalAggressiveness.Aggressive; }
+                        }
+                        
+                        Animals.Add((animal, aggression));
+                        
                     }
 
                 }
@@ -140,6 +122,7 @@ namespace ImprovedMinimap {
             
         }
 
+        // Adjusting map zoom (scale)
         public void Update() {
             if (Input.GetKeyDown(zoomInHotkey.Value)) { Zoom += 0.05f; }
             if (Input.GetKeyDown(zoomOutHotkey.Value)) { Zoom -= 0.05f; }
@@ -147,31 +130,10 @@ namespace ImprovedMinimap {
             Zoom = Mathf.Clamp(Zoom, 0.2f, 1.25f);
         }
 
-        private static Image GetAnimalDot() {
-
-            Image dot;
-            if (AvailableDots.Count > 0) {
-                dot = AvailableDots[0];
-                AvailableDots.RemoveAt(0);
-            } else {
-                var GO = Instantiate(ModMarker.gameObject, AnimalDotParent);
-                dot = GO.GetComponent<Image>();
-            }
-
-            dot.gameObject.SetActive(true);
-            return dot;
-            
-        }
-
-        private static void ReleaseDot(Image dot) {
-            DotsInUse.Remove(dot);
-            AvailableDots.Add(dot);
-            dot.gameObject.SetActive(false);
-        }
-
         [HarmonyPrefix]
         public static void runMapFollowPrefix(RenderMap __instance) {
 
+            // Toggle whether or not the minimap should be shown
             if (TownManager.manage.mapUnlocked && !__instance.mapOpen &&
                 !MenuButtonsTop.menu.subMenuOpen && 
                 !WeatherManager.manage.isInside() && 
@@ -180,29 +142,13 @@ namespace ImprovedMinimap {
                 !CheatScript.cheat.cheatMenuOpen && __instance.mapCircle.gameObject.activeSelf != showMinimap)
                 __instance.mapCircle.gameObject.SetActive(showMinimap);
 
-            if (AnimalDotParent == null) {
-                AnimalDotParent = new GameObject().AddComponent<RectTransform>();
-                AnimalDotParent.transform.SetParent(RenderMap.map.mapImage.transform);
-                AnimalDotParent.anchorMin = Vector2.zero;
-                AnimalDotParent.anchorMax = Vector2.zero;
-                AnimalDotParent.sizeDelta = RenderMap.map.mapImage.rectTransform.sizeDelta;
-                AnimalDotParent.pivot = Vector2.zero;
-                AnimalDotParent.rotation = Quaternion.identity;
-                AnimalDotParent.localPosition = Vector2.zero;
-            }
-
-            // Makes sure the right number of dots are visible and in use
-            while (Animals.Count > DotsInUse.Count) { DotsInUse.Add(GetAnimalDot()); }
-            while (DotsInUse.Count > Animals.Count) { ReleaseDot(DotsInUse[0]); }
-            
+            // Makes sure every animal has a map marker and is in the correct position with the correct color
+            var Markers = TRMap.RefreshPool("Animals", Animals.Count, AnimalMarkerSprite, AnimalMarkerSize.Value);
             for (var i = 0; i < Animals.Count; i++) {
-                DotsInUse[i].rectTransform.rotation = Quaternion.identity;
-                //DotsInUse[i].rectTransform.anchoredPosition = new Vector2(0, 0);
-                DotsInUse[i].rectTransform.localPosition = 
-                    new Vector2(-Animals[i].transform.position.x / (2f * RenderMap.map.mapScale), -Animals[i].transform.position.z / (2f * RenderMap.map.mapScale));
-                //DotsInUse[i].rectTransform.anchoredPosition = new Vector2(100, 100);
-                DotsInUse[i].color = Color.red;
-
+                Markers[i].mainRect.localPosition =
+                    new Vector2(Animals[i].AI.transform.position.x / 2f / RenderMap.map.mapScale, Animals[i].AI.transform.position.z / 2f / RenderMap.map.mapScale);
+                Markers[i].markerImage.color = Animals[i].aggression == AnimalAggressiveness.Aggressive ? AggressiveAnimalColor.Value : 
+                                      Animals[i].aggression == AnimalAggressiveness.Defensive ? DefensiveAnimalColor.Value : PassiveAnimalColor.Value;
             }
 
             if (!__instance.mapOpen) {
@@ -254,8 +200,6 @@ namespace ImprovedMinimap {
             
             var pointingAtPosition = __instance.pointingAtPosition;
             var myTrans = __instance.myTrans;
-            
-            StaticLogger.LogInfo(Vector3.Distance(RenderMap.map.charToPointTo.position, pointingAtPosition) * Zoom);
 
             if (Vector3.Distance(RenderMap.map.charToPointTo.position, pointingAtPosition) * Zoom < 45f) {
                 myTrans.localPosition = new Vector3(pointingAtPosition.x / 2f / RenderMap.map.mapScale, pointingAtPosition.z / 2f / RenderMap.map.mapScale, 1f);
@@ -267,6 +211,8 @@ namespace ImprovedMinimap {
             }
 
         }
+        
+        public enum AnimalAggressiveness { Passive, Defensive, Aggressive }
 
     }
 

@@ -37,8 +37,26 @@
     <PostBuildEvent>call C:\PreAndPostBuildBats\ImprovedMinimap\move.bat</PostBuildEvent>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="..\Tiny-Resort-Tools\Tiny Resort Tools\**">
+      <Link>Tiny Resort Tools\**</Link>
+    </Compile>
     <Compile Include="ImprovedMinimap.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Update="..\Tiny-Resort-Tools\Tiny Resort Tools\Map.cs">
+      <Link>Tiny Resort Tools\Map.cs</Link>
+    </Compile>
+    <Compile Update="..\Tiny-Resort-Tools\Tiny Resort Tools\TRPlugin.cs">
+      <Link>Tiny Resort Tools\TRPlugin.cs</Link>
+    </Compile>
+    <Compile Update="..\Tiny-Resort-Tools\Tiny Resort Tools\Patches\NotificationPatch.cs">
+      <Link>Tiny Resort Tools\Patches\NotificationPatch.cs</Link>
+    </Compile>
+    <Compile Update="..\Tiny-Resort-Tools\Tiny Resort Tools\TRPlugin.cs">
+      <Link>Tiny Resort Tools\TRPlugin.cs</Link>
+    </Compile>
+    <Compile Update="..\Tiny-Resort-Tools\Tiny Resort Tools\Patches\RenderMapPatch.cs">
+      <Link>Tiny Resort Tools\Patches\RenderMapPatch.cs</Link>
+    </Compile>
   </ItemGroup>
   <ItemGroup>
     <Reference Include="0Harmony, Version=2.9.0.0, Culture=neutral, processorArchitecture=MSIL">
