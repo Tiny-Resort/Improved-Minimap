@@ -64,10 +64,10 @@ namespace ImprovedMinimap {
             Zoom = defaultZoom.Value;
 
             showNearbyAnimals = Config.Bind("MapMarkers", "ShowNearbyAnimals", true, "Shows colored dot markers on the minimap where animals are located.");
-            AnimalMarkerSize = Config.Bind("MapMarkers", "AnimalMarkerSize", 10f, "How big the animal dot markers should appear.");
+            AnimalMarkerSize = Config.Bind("MapMarkers", "AnimalMarkerSize", 8f, "How big the animal dot markers should appear.");
             ExcludeFarmAnimals = Config.Bind("MapMarkers", "ExcludeFarmAnimals", true, "If true, then farm animals will not be shown on the minimap.");
             PassiveAnimalColor = Config.Bind("MapMarkers", "PassiveAnimalColor", new Color(3f / 255f, 240f / 255f, 127f / 255f, 1), "The color of the dot marker for animals that will not attack you ever.");
-            DefensiveAnimalColor = Config.Bind("MapMarkers", "AggressiveAnimalColor", new Color(1, 209f / 255f, 30f / 255f, 1), "The color of the dot marker for defensive animals who attack when threatened.");
+            DefensiveAnimalColor = Config.Bind("MapMarkers", "DefensiveAnimalColor", new Color(1, 219f / 255f, 30f / 255f, 1), "The color of the dot marker for defensive animals who attack when threatened.");
             AggressiveAnimalColor = Config.Bind("MapMarkers", "AggressiveAnimalColor", new Color(242f / 255f, 40f / 255f, 3f / 255f, 1), "The color of the dot marker for aggressive animals who will attack you on sight.");
          
             hideMinimapHotkey = Config.Bind("Keybinds", "HideMinimapHotkey", KeyCode.None, "Keybind for toggling whether or not the minimap is shown. (Set to None to disable)");
