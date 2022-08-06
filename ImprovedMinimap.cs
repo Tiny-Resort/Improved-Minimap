@@ -10,17 +10,15 @@ using Mirror;
 using UnityEngine;
 using HarmonyLib;
 using System.Reflection;
-using TinyResort;
 using TMPro;
 using UnityEngine.UI;
 
-namespace ImprovedMinimap {
+namespace TinyResort {
     
     [BepInPlugin(pluginGuid, pluginName, pluginVersion)]
     public class ImprovedMinimap : BaseUnityPlugin {
 
         public static TRPlugin Plugin;
-
         public const string pluginGuid = "tinyresort.dinkum.improvedminimap";
         public const string pluginName = "Improved Minimap";
         public const string pluginVersion = "0.6.0";
@@ -53,7 +51,7 @@ namespace ImprovedMinimap {
         
         private void Awake() {
 
-            Plugin = TRTools.Initialize(this, new Harmony(pluginGuid), Logger, 18, pluginGuid, pluginName, pluginVersion);
+            Plugin = TRTools.Initialize(this, Logger, 18, pluginGuid, pluginName, pluginVersion);
             Plugin.QuickPatch(typeof(CharInteract), "Update", typeof(ImprovedMinimap), "updatePrefix");
             Plugin.QuickPatch(typeof(RenderMap), "runMapFollow", typeof(ImprovedMinimap), "runMapFollowPrefix");
             Plugin.QuickPatch(typeof(mapIcon), "Update", typeof(ImprovedMinimap), "mapIconUpdatePostfix");
