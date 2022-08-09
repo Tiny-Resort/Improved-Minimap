@@ -21,23 +21,20 @@ namespace TinyResort {
         public static TRPlugin Plugin;
         public const string pluginGuid = "tinyresort.dinkum.improvedminimap";
         public const string pluginName = "Improved Minimap";
-        public const string pluginVersion = "0.6.0";
+        public const string pluginVersion = "0.6.1";
         
         public static float Zoom = 1;
         public static bool showMinimap = true;
-        public static ConfigEntry<int> nexusID;
         public static Vector3 currentPosition;
 
         private static RectTransform BiomeNameBox;
         public static TextMeshProUGUI BiomeNameText;
         public static ConfigEntry<bool> showBiomeName;
 
-        private static float updateAnimalsTimer;
         public static List<(AnimalAI AI, AnimalAggressiveness aggression)> Animals = new List<(AnimalAI AI, AnimalAggressiveness aggression)>();
+        private static float updateAnimalsTimer;
         public static LayerMask AnimalMask;
         private static Sprite AnimalMarkerSprite;
-
-        public static ConfigEntry<bool> isDebug;
         public static ConfigEntry<KeyCode> zoomInHotkey;
         public static ConfigEntry<KeyCode> zoomOutHotkey;
         public static ConfigEntry<float> defaultZoom;
@@ -101,13 +98,17 @@ namespace TinyResort {
                         
                         // Ignore farm animals if the setting says to
                         var animal = hit.GetComponentInParent<AnimalAI>();
+                        if (animal == null) continue;
                         if (ExcludeFarmAnimals.Value && hit.GetComponentInParent<FarmAnimal>()) continue;
                         
                         // Figures out how aggressive the animal is for marker style purposes
                         var aggression = AnimalAggressiveness.Passive;
                         if (animal.myEnemies == (animal.myEnemies & (1 << LayerMask.NameToLayer("Char")))) {
-                            var AttackAI = animal.GetComponent<AnimalAI_Attack>();
-                            if (AttackAI != null) { aggression = AttackAI.attackOnlyOnAttack ? AnimalAggressiveness.Defensive : AnimalAggressiveness.Aggressive; }
+                            var FarmAnimal = animal.GetComponent<FarmAnimal>();
+                            if (!FarmAnimal) {
+                                var AttackAI = animal.GetComponent<AnimalAI_Attack>();
+                                if (AttackAI != null) { aggression = AttackAI.attackOnlyOnAttack ? AnimalAggressiveness.Defensive : AnimalAggressiveness.Aggressive; }
+                            }
                         }
                         
                         Animals.Add((animal, aggression));
@@ -163,6 +164,7 @@ namespace TinyResort {
                         // Clones the box that's normally for a map open button prompt and deletes its icon children
                         BiomeNameBox = GameObject.Instantiate(RenderMap.map.buttonPrompt, RenderMap.map.buttonPrompt.parent);
                         BiomeNameBox.transform.SetSiblingIndex(1);
+                        BiomeNameBox.anchoredPosition += new Vector2(0, 7);
                         Destroy(BiomeNameBox.transform.GetChild(1).gameObject);
                         Destroy(BiomeNameBox.transform.GetChild(0).gameObject);
                         
@@ -170,6 +172,7 @@ namespace TinyResort {
                         var TextGO = GameObject.Instantiate(RenderMap.map.biomeName.gameObject, BiomeNameBox.transform);
                         BiomeNameText = TextGO.GetComponent<TextMeshProUGUI>();
                         BiomeNameText.enableWordWrapping = false;
+                        BiomeNameText.fontSize = 13;
                         BiomeNameText.verticalAlignment = VerticalAlignmentOptions.Geometry;
                         BiomeNameText.rectTransform.anchorMin = new Vector2(0.5f, 0.5f);
                         BiomeNameText.rectTransform.anchorMax = new Vector2(0.5f, 0.5f);
@@ -184,7 +187,7 @@ namespace TinyResort {
 
                     // Show the biome name below the minimap
                     BiomeNameText.text = GenerateMap.generate.getBiomeNameUnderMapCursor((int)currentPosition.x / 2, (int)currentPosition.z / 2);
-                    BiomeNameBox.sizeDelta = new Vector2(BiomeNameText.preferredWidth + 20, 26);
+                    BiomeNameBox.sizeDelta = new Vector2(BiomeNameText.preferredWidth + 20, 21);
                     
                 }
 
