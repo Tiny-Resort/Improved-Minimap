@@ -32,11 +32,11 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="ImprovedMinimap.cs" />
-    <Compile Include="..\TinyResortTools\Tiny Resort Tools\**">
-      <Link>Tiny Resort Tools\**</Link>
-    </Compile>
   </ItemGroup>
   <ItemGroup>
+    <Reference Include="dev.TinyResort.TRTools">
+      <HintPath>..\DinkumInstallFolder\BepInEx\plugins\dev.TinyResort.TRTools.dll</HintPath>
+    </Reference>
     <Reference Include="0Harmony">
       <HintPath>..\DinkumInstallFolder\BepInEx\core\0Harmony.dll</HintPath>
     </Reference>

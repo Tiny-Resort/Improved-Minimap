@@ -21,7 +21,9 @@ namespace TinyResort {
         public static TRPlugin Plugin;
         public const string pluginGuid = "tinyresort.dinkum.improvedminimap";
         public const string pluginName = "Improved Minimap";
-        public const string pluginVersion = "0.6.1";
+        public const string pluginVersion = "0.6.3";
+
+        private static TRCustomLicense customLicense;
         
         public static float Zoom = 1;
         public static bool showMinimap = true;
@@ -47,11 +49,17 @@ namespace TinyResort {
         public static ConfigEntry<Color> DefensiveAnimalColor;
         
         private void Awake() {
-
-            Plugin = TRTools.Initialize(this, Logger, 18, pluginGuid, pluginName, pluginVersion);
+            
+            Plugin = TRTools.Initialize(this, 18);
             Plugin.QuickPatch(typeof(CharInteract), "Update", typeof(ImprovedMinimap), "updatePrefix");
             Plugin.QuickPatch(typeof(RenderMap), "runMapFollow", typeof(ImprovedMinimap), "runMapFollowPrefix");
             Plugin.QuickPatch(typeof(mapIcon), "Update", typeof(ImprovedMinimap), "mapIconUpdatePostfix");
+
+            // License for unlocking features
+            customLicense = TRLicenses.AddLicense(pluginGuid, "001", "Improved Minimap", new Color(0.95f, 0.56f, 0.25f), 2);
+            customLicense.SetLevelInfo(1, "Displays the current biome name below the minimap.", 500);
+            customLicense.SetLevelInfo(2, "Displays markers for nearby animal locations on the minimap.", 2000);
+            customLicense.ConnectToSkill(CharLevelManager.SkillTypes.Hunting, 20);
 
             #region Config Options
             showBiomeName = Config.Bind("General", "ShowBiomeName", true, "Shows the player's current biome name under the minimap.");
@@ -79,11 +87,10 @@ namespace TinyResort {
         public static void updatePrefix(CharInteract __instance) {
             
             // Gets the player's current position
-            if (!__instance.isLocalPlayer) return;
-            currentPosition = __instance.transform.position;
+            currentPosition = NetworkMapSharer.share.localChar.transform.position;
 
             // Looks for nearby animals
-            if (showNearbyAnimals.Value) {
+            if (showNearbyAnimals.Value && customLicense.level >= 2) {
 
                 // Only runs every quarter second to save on performance
                 updateAnimalsTimer -= Time.deltaTime;
@@ -131,7 +138,7 @@ namespace TinyResort {
 
         [HarmonyPrefix]
         public static void runMapFollowPrefix(RenderMap __instance) {
-
+            
             // Toggle whether or not the minimap should be shown
             if (TownManager.manage.mapUnlocked && !__instance.mapOpen &&
                 !MenuButtonsTop.menu.subMenuOpen && 
@@ -142,12 +149,12 @@ namespace TinyResort {
                 __instance.mapCircle.gameObject.SetActive(showMinimap);
 
             // Makes sure every animal has a map marker and is in the correct position with the correct color
-            var Markers = TRMap.RefreshPool("Animals", Animals.Count, AnimalMarkerSprite, AnimalMarkerSize.Value);
+            Animals.RemoveAll(i => i.AI == null);
+            TRMap.RefreshPool("Animals", Animals.Count, AnimalMarkerSprite, AnimalMarkerSize.Value);
             for (var i = 0; i < Animals.Count; i++) {
-                Markers[i].mainRect.localPosition =
-                    new Vector2(Animals[i].AI.transform.position.x / 2f / RenderMap.map.mapScale, Animals[i].AI.transform.position.z / 2f / RenderMap.map.mapScale);
-                Markers[i].markerImage.color = Animals[i].aggression == AnimalAggressiveness.Aggressive ? AggressiveAnimalColor.Value : 
-                                      Animals[i].aggression == AnimalAggressiveness.Defensive ? DefensiveAnimalColor.Value : PassiveAnimalColor.Value;
+                TRMap.SetMarkerPosition("Animals", i, Animals[i].AI.transform.position);
+                TRMap.SetMarkerColor("Animals", i, Animals[i].aggression == AnimalAggressiveness.Aggressive ? AggressiveAnimalColor.Value : 
+                                      Animals[i].aggression == AnimalAggressiveness.Defensive ? DefensiveAnimalColor.Value : PassiveAnimalColor.Value);
             }
 
             if (!__instance.mapOpen) {
@@ -156,7 +163,7 @@ namespace TinyResort {
                 RenderMap.map.scale = Zoom * 20f;
                 RenderMap.map.desiredScale = RenderMap.map.scale;
 
-                if (showBiomeName.Value) {
+                if (showBiomeName.Value && customLicense.level >= 1) {
 
                     // Create a biome name box to go under the minimap
                     if (BiomeNameBox == null) {
