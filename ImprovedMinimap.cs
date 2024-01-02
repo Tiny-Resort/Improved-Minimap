@@ -17,13 +17,13 @@ namespace TinyResort {
     
     [BepInPlugin(pluginGuid, pluginName, pluginVersion)]
     public class ImprovedMinimap : BaseUnityPlugin {
-
+        
         public static TRPlugin Plugin;
         public const string pluginGuid = "tinyresort.dinkum.improvedminimap";
         public const string pluginName = "Improved Minimap";
         public const string pluginVersion = "0.6.3";
 
-        private static TRCustomLicense customLicense;
+        private static TRCustomLicence customLicense;
         
         public static float Zoom = 1;
         public static bool showMinimap = true;
@@ -52,14 +52,15 @@ namespace TinyResort {
             
             Plugin = TRTools.Initialize(this, 18);
             Plugin.QuickPatch(typeof(CharInteract), "Update", typeof(ImprovedMinimap), "updatePrefix");
-            Plugin.QuickPatch(typeof(RenderMap), "runMapFollow", typeof(ImprovedMinimap), "runMapFollowPrefix");
+            Plugin.QuickPatch(typeof(RenderMap), "RunMapFollow", typeof(ImprovedMinimap), "runMapFollowPrefix");
             Plugin.QuickPatch(typeof(mapIcon), "Update", typeof(ImprovedMinimap), "mapIconUpdatePostfix");
-
-            // License for unlocking features
-            customLicense = TRLicenses.AddLicense(pluginGuid, "001", "Improved Minimap", new Color(0.95f, 0.56f, 0.25f), 2);
+            
+            // License for unlocking feature    s
+            customLicense = Plugin.AddLicence(001, "Improved Minimap", 2);
+            customLicense.SetColor(new Color(0.95f, 0.56f, 0.25f));
+            customLicense.AddSkillRequirement(1, CharLevelManager.SkillTypes.Hunting, 20);
             customLicense.SetLevelInfo(1, "Displays the current biome name below the minimap.", 500);
             customLicense.SetLevelInfo(2, "Displays markers for nearby animal locations on the minimap.", 2000);
-            customLicense.ConnectToSkill(CharLevelManager.SkillTypes.Hunting, 20);
 
             #region Config Options
             showBiomeName = Config.Bind("General", "ShowBiomeName", true, "Shows the player's current biome name under the minimap.");
@@ -79,7 +80,7 @@ namespace TinyResort {
             #endregion
 
             AnimalMask = LayerMask.GetMask("Prey", "Predator");
-            AnimalMarkerSprite = TRDrawing.CircleSprite(128, Color.white, 32, new Color(0.25f, 0.25f, 0.25f, 1));
+            AnimalMarkerSprite = TRInterface.DrawCircle(128, Color.white, 32, new Color(0.25f, 0.25f, 0.25f, 1));
 
         }
 
@@ -87,7 +88,7 @@ namespace TinyResort {
         public static void updatePrefix(CharInteract __instance) {
             
             // Gets the player's current position
-            currentPosition = NetworkMapSharer.share.localChar.transform.position;
+            currentPosition = NetworkMapSharer.Instance.localChar.transform.position;
 
             // Looks for nearby animals
             if (showNearbyAnimals.Value && customLicense.level >= 2) {
@@ -142,7 +143,7 @@ namespace TinyResort {
             // Toggle whether or not the minimap should be shown
             if (TownManager.manage.mapUnlocked && !__instance.mapOpen &&
                 !MenuButtonsTop.menu.subMenuOpen && 
-                !WeatherManager.manage.isInside() && 
+                !WeatherManager.Instance.IsMyPlayerInside && 
                 !ChestWindow.chests.chestWindowOpen && 
                 !CraftingManager.manage.craftMenuOpen && 
                 !CheatScript.cheat.cheatMenuOpen && __instance.mapCircle.gameObject.activeSelf != showMinimap)
@@ -150,7 +151,7 @@ namespace TinyResort {
 
             // Makes sure every animal has a map marker and is in the correct position with the correct color
             Animals.RemoveAll(i => i.AI == null);
-            TRMap.RefreshPool("Animals", Animals.Count, AnimalMarkerSprite, AnimalMarkerSize.Value);
+            TRMap.Refresh("Animals", Animals.Count, AnimalMarkerSprite, AnimalMarkerSize.Value);
             for (var i = 0; i < Animals.Count; i++) {
                 TRMap.SetMarkerPosition("Animals", i, Animals[i].AI.transform.position);
                 TRMap.SetMarkerColor("Animals", i, Animals[i].aggression == AnimalAggressiveness.Aggressive ? AggressiveAnimalColor.Value : 
@@ -160,23 +161,23 @@ namespace TinyResort {
             if (!__instance.mapOpen) {
                 
                 // Minimap zoom settings
-                RenderMap.map.scale = Zoom * 20f;
-                RenderMap.map.desiredScale = RenderMap.map.scale;
+                RenderMap.Instance.scale = Zoom * 20f;
+                RenderMap.Instance.desiredScale = RenderMap.Instance.scale;
+                RectTransform buttonPrompt = Traverse.Create(RenderMap.Instance).Field("buttonPrompt").GetValue() as RectTransform;
 
-                if (showBiomeName.Value && customLicense.level >= 1) {
+                if (showBiomeName.Value && customLicense.level >= 1 && buttonPrompt != null) {
 
                     // Create a biome name box to go under the minimap
                     if (BiomeNameBox == null) {
-                        
                         // Clones the box that's normally for a map open button prompt and deletes its icon children
-                        BiomeNameBox = GameObject.Instantiate(RenderMap.map.buttonPrompt, RenderMap.map.buttonPrompt.parent);
+                        BiomeNameBox = GameObject.Instantiate(buttonPrompt, buttonPrompt.parent);
                         BiomeNameBox.transform.SetSiblingIndex(1);
                         BiomeNameBox.anchoredPosition += new Vector2(0, 7);
                         Destroy(BiomeNameBox.transform.GetChild(1).gameObject);
                         Destroy(BiomeNameBox.transform.GetChild(0).gameObject);
                         
                         // Adds a text component so we can give it a biome name, makes sure its centered
-                        var TextGO = GameObject.Instantiate(RenderMap.map.biomeName.gameObject, BiomeNameBox.transform);
+                        var TextGO = GameObject.Instantiate(RenderMap.Instance.biomeName.gameObject, BiomeNameBox.transform);
                         BiomeNameText = TextGO.GetComponent<TextMeshProUGUI>();
                         BiomeNameText.enableWordWrapping = false;
                         BiomeNameText.fontSize = 13;
@@ -189,7 +190,7 @@ namespace TinyResort {
                     }
 
                     // Hide the original map open button prompt
-                    var Hide = RenderMap.map.buttonPrompt.GetComponentsInChildren<CanvasRenderer>();
+                    var Hide = buttonPrompt.GetComponentsInChildren<CanvasRenderer>();
                     foreach (var rend in Hide) { rend.SetAlpha(0); }
 
                     // Show the biome name below the minimap
@@ -204,18 +205,20 @@ namespace TinyResort {
 
         [HarmonyPostfix]
         public static void mapIconUpdatePostfix(mapIcon __instance) {
-            if (!__instance.isCustom() || RenderMap.map.mapOpen) return;
+            RectTransform myRectTransform = Traverse.Create(__instance).Field("myRectTransform").GetValue() as RectTransform;
+          //  !__instance.isCustom() ||
+            if ( RenderMap.Instance.mapOpen) return;
             
-            var pointingAtPosition = __instance.pointingAtPosition;
-            var myTrans = __instance.myTrans;
+            var pointingAtPosition = __instance.PointingAtPosition;
+            var myTrans = myRectTransform;
 
-            if (Vector3.Distance(RenderMap.map.charToPointTo.position, pointingAtPosition) * Zoom < 45f) {
-                myTrans.localPosition = new Vector3(pointingAtPosition.x / 2f / RenderMap.map.mapScale, pointingAtPosition.z / 2f / RenderMap.map.mapScale, 1f);
-                myTrans.localScale = new Vector3(5.5f / RenderMap.map.desiredScale, 5.5f / RenderMap.map.desiredScale, 1f);
+            if (Vector3.Distance(RenderMap.Instance.charToPointTo.position, pointingAtPosition) * Zoom < 45f) {
+                myTrans.localPosition = new Vector3(pointingAtPosition.x / 2f / RenderMap.Instance.mapScale, pointingAtPosition.z / 2f / RenderMap.Instance.mapScale, 1f);
+                myTrans.localScale = new Vector3(5.5f / RenderMap.Instance.desiredScale, 5.5f / RenderMap.Instance.desiredScale, 1f);
             } else {
-                Vector3 vector = RenderMap.map.charToPointTo.position + ((pointingAtPosition - RenderMap.map.charToPointTo.position).normalized * (45f / Zoom));
-                myTrans.localPosition = new Vector3(vector.x / 2f / RenderMap.map.mapScale, vector.z / 2f / RenderMap.map.mapScale, 1f);
-                myTrans.localScale = new Vector3(5.5f / RenderMap.map.desiredScale, 5.5f / RenderMap.map.desiredScale, 1f);
+                Vector3 vector = RenderMap.Instance.charToPointTo.position + ((pointingAtPosition - RenderMap.Instance.charToPointTo.position).normalized * (45f / Zoom));
+                myTrans.localPosition = new Vector3(vector.x / 2f / RenderMap.Instance.mapScale, vector.z / 2f / RenderMap.Instance.mapScale, 1f);
+                myTrans.localScale = new Vector3(5.5f / RenderMap.Instance.desiredScale, 5.5f / RenderMap.Instance.desiredScale, 1f);
             }
 
         }

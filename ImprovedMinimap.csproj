@@ -35,7 +35,7 @@
   </ItemGroup>
   <ItemGroup>
     <Reference Include="dev.TinyResort.TRTools">
-      <HintPath>..\DinkumInstallFolder\BepInEx\plugins\dev.TinyResort.TRTools.dll</HintPath>
+      <HintPath>..\DinkumInstallFolder\BepInEx\plugins\TR Tools\dev.TinyResort.TRTools.dll</HintPath>
     </Reference>
     <Reference Include="0Harmony">
       <HintPath>..\DinkumInstallFolder\BepInEx\core\0Harmony.dll</HintPath>
