@@ -21,7 +21,7 @@ namespace TinyResort {
         public static TRPlugin Plugin;
         public const string pluginGuid = "tinyresort.dinkum.improvedminimap";
         public const string pluginName = "Improved Minimap";
-        public const string pluginVersion = "0.6.4";
+        public const string pluginVersion = "1.0.1";
 
         private static TRCustomLicence customLicense;
         
